@@ -57,6 +57,8 @@ void UpnpBroadcastResponder::serverLoop(){
   int packetSize = UDP.parsePacket();
   if (packetSize <= 0)
     return;
+  Serial.print("UDP packet encountered, size: ");
+  Serial.print(packetSize);
   
   IPAddress senderIP = UDP.remoteIP();
   unsigned int senderPort = UDP.remotePort();
@@ -68,6 +70,7 @@ void UpnpBroadcastResponder::serverLoop(){
   String request = String((char *)packetBuffer);
 
   if(request.indexOf('M-SEARCH') > 0) {
+      Serial.println("Found 'M-SEARCH' in request");
       if(request.indexOf("urn:Belkin:device:**") > 0) {
         Serial.println("Got UDP Belkin Request..");
         
