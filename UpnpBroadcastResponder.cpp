@@ -57,11 +57,16 @@ void UpnpBroadcastResponder::serverLoop(){
   int packetSize = UDP.parsePacket();
   if (packetSize <= 0)
     return;
-  Serial.print("UDP packet encountered, size: ");
-  Serial.print(packetSize);
   
   IPAddress senderIP = UDP.remoteIP();
   unsigned int senderPort = UDP.remotePort();
+  
+  Serial.print("UDP packet encountered from IP ");
+  Serial.print(senderIP);
+  Serial.print(" to port udp/");
+  Serial.print(senderPort);
+  Serial.print(" with size (bytes) ");
+  Serial.println(packetSize);
   
   // read the packet into the buffer
   UDP.read(packetBuffer, packetSize);
@@ -70,15 +75,11 @@ void UpnpBroadcastResponder::serverLoop(){
   String request = String((char *)packetBuffer);
 
   if(request.indexOf('M-SEARCH') > 0) {
-      Serial.println("Found 'M-SEARCH' in request");
+      Serial.println("  Discovery request detected");
       if(request.indexOf("urn:Belkin:device:**") > 0) {
-        Serial.println("Got UDP Belkin Request..");
-        
-        // int arrSize = sizeof(switchs) / sizeof(Switch);
-      
+        Serial.println("  Belkin-compatible device discovery request detected");
         for(int n = 0; n < numOfSwitchs; n++) {
             Switch &sw = switches[n];
-
             if (&sw != NULL) {
               sw.respondToSearch(senderIP, senderPort);              
             }

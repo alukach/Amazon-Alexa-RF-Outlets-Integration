@@ -62,12 +62,17 @@ void Switch::startWebServer(){
   //server->onNotFound(handleNotFound);
   server->begin();
 
-  Serial.println("WebServer started on port: ");
-  Serial.println(localPort);
+  Serial.print("WebServer started on port tcp/");
+  Serial.print(localPort);
+  Serial.print(" for alexa device named '");
+  Serial.print(device_name);
+  Serial.println("'");
 }
  
 void Switch::handleEventservice(){
-  Serial.println(" ########## Responding to eventservice.xml ... ########\n");
+  Serial.print("Responding to eventservice.xml for device named '");
+  Serial.print(device_name);
+  Serial.println("'");
   
   String eventservice_xml = "<?scpd xmlns=\"urn:Belkin:service-1-0\"?>"
         "<actionList>"
@@ -101,23 +106,25 @@ void Switch::handleEventservice(){
 }
  
 void Switch::handleUpnpControl(){
-  Serial.println("########## Responding to  /upnp/control/basicevent1 ... ##########");      
+  Serial.print("Responding to /upnp/control/basicevent1 for device named '");
+  Serial.print(device_name);
+  Serial.println("'");
   
   //for (int x=0; x <= HTTP.args(); x++) {
   //  Serial.println(HTTP.arg(x));
   //}
 
   String request = server->arg(0);      
-  Serial.print("request:");
+  Serial.print("HTTP request:");
   Serial.println(request);
 
   if(request.indexOf("<BinaryState>1</BinaryState>") > 0) {
-      Serial.println("Got Turn on request");
+      Serial.println("Requested state change: TURN ON");
       onCallback();
   }
 
   if(request.indexOf("<BinaryState>0</BinaryState>") > 0) {
-      Serial.println("Got Turn off request");
+      Serial.println("Requested state change: TURN OFF");
       offCallback();
   }
   
@@ -125,11 +132,13 @@ void Switch::handleUpnpControl(){
 }
 
 void Switch::handleRoot(){
-  server->send(200, "text/plain", "You should tell Alexa to discover devices");
+  server->send(200, "text/plain", "You should tell Alexa to 'discover devices'");
 }
 
 void Switch::handleSetupXml(){
-  Serial.println(" ########## Responding to setup.xml ... ########\n");
+  Serial.print("Responding to setup.xml for device named '");
+  Serial.print(device_name);
+  Serial.println("'");
   
   IPAddress localIP = WiFi.localIP();
   char s[16];
@@ -161,8 +170,8 @@ void Switch::handleSetupXml(){
         
     server->send(200, "text/xml", setup_xml.c_str());
     
-    Serial.print("Sending :");
-    Serial.println(setup_xml);
+    Serial.print("Sending XML: ");
+    Serial.print(setup_xml);
 }
 
 String Switch::getAlexaInvokeName() {
@@ -170,10 +179,9 @@ String Switch::getAlexaInvokeName() {
 }
 
 void Switch::respondToSearch(IPAddress& senderIP, unsigned int senderPort) {
-  Serial.println("");
-  Serial.print("Sending response to ");
-  Serial.println(senderIP);
-  Serial.print("Port : ");
+  Serial.print("Sending UDP discovery response to IP ");
+  Serial.print(senderIP);
+  Serial.print(" on port udp/");
   Serial.println(senderPort);
 
   IPAddress localIP = WiFi.localIP();
@@ -197,5 +205,5 @@ void Switch::respondToSearch(IPAddress& senderIP, unsigned int senderPort) {
   UDP.write(response.c_str());
   UDP.endPacket();                    
 
-   Serial.println("Response sent !");
+  Serial.println("Discovery response sent");
 }
