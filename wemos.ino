@@ -59,16 +59,19 @@ void setup()
   
   // -- WifiManager handling
 
+  // 5-second delay in case you wish to observe boot-up
   for(int i=0; i < 5; i++) {
     Serial.print(".");
     delay(1000);
   }
   Serial.println("Booting");
   
-  //clean FS, for testing if jumper is in flash mode
+  // Clean FS, for testing... consider enabling if jumper is in flash mode, etc.
   // SPIFFS.format();
-  
+
+  // Set the flash/boot pin for input so we can read if the jumper is present
   pinMode(0, INPUT);
+  // If the jumper is in "flash" mode (i.e., pin 0 is grounded), we will be enabling the config portal
   forceConfigPortal = (digitalRead(0) == 0);
   if(forceConfigPortal) {  
     Serial.println("Jumper set for flash - will trigger config portal");
@@ -76,42 +79,45 @@ void setup()
     Serial.println("Jumper set for boot - will attempt autoconnect, else config portal");
   }
     
-  //read configuration from FS json
-  Serial.println("mounting FS...");
-
+  // Read configuration from FS json
+  Serial.println("Mounting ESP8266 integrated filesystem...");
   if (SPIFFS.begin()) {
-    Serial.println("mounted file system");
+    Serial.println("Mounted file system");
     if (SPIFFS.exists("/config.json")) {
-      //file exists, reading and loading
-      Serial.println("reading config file");
+      Serial.println("Found existing config; reading file");
       File configFile = SPIFFS.open("/config.json", "r");
       if (configFile) {
-        Serial.println("opened config file");
+        Serial.println("Opened config file for reading");
         size_t size = configFile.size();
+        Serial.print("File size (bytes) = ");
+        Serial.println(size);
         // Allocate a buffer to store contents of the file.
         std::unique_ptr<char[]> buf(new char[size]);
-
         configFile.readBytes(buf.get(), size);
         DynamicJsonBuffer jsonBuffer;
         JsonObject& json = jsonBuffer.parseObject(buf.get());
+        Serial.println("Parsed JSON content:");
         json.printTo(Serial);
+        Serial.println();
         if (json.success()) {
-          Serial.println("\nparsed json");
-
           strcpy(alexa_name1, json["alexa_name1"]);
           strcpy(alexa_name2, json["alexa_name2"]);
           strcpy(alexa_name3, json["alexa_name3"]);
           strcpy(alexa_name4, json["alexa_name4"]);
-
+          Serial.println("Parsed Alexa relay name #1: " + String(alexa_name1));
+          Serial.println("Parsed Alexa relay name #2: " + String(alexa_name2));
+          Serial.println("Parsed Alexa relay name #3: " + String(alexa_name3));
+          Serial.println("Parsed Alexa relay name #4: " + String(alexa_name4));
         } else {
-          Serial.println("failed to load json config");
+          Serial.println("** ERROR ** Failed to load/parse JSON config");
         }
+      } else {
+        Serial.println("No JSON file found in filesystem");
       }
     }
   } else {
-    Serial.println("failed to mount FS");
+    Serial.println("** ERROR ** Failed to mount ESP8266's integrated filesyste,m");
   }
-  //end read
 
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
@@ -121,10 +127,10 @@ void setup()
   WiFiManagerParameter custom_alexa_name3("alexa_name3", "Device #3 name", alexa_name3, 100);
   WiFiManagerParameter custom_alexa_name4("alexa_name4", "Device #4 name", alexa_name4, 100);
 
-  //set config save notify callback
+  // Set the function that will be called to save the custom parameter after config
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //add all your parameters here
+  // Hand the parameter defintions to the WifiManager for use during config
   wifiManager.addParameter(&custom_alexa_name1);
   wifiManager.addParameter(&custom_alexa_name2);
   wifiManager.addParameter(&custom_alexa_name3);
@@ -146,23 +152,19 @@ void setup()
     wifiManager.setSTAStaticIPConfig(IPAddress(10,0,1,99), IPAddress(10,0,1,1), IPAddress(255,255,255,0));
     // Force config portal while jumper is set for flashing
      if (!wifiManager.startConfigPortal(AP_Name)) {
-          Serial.println("failed to connect and hit timeout");
+          Serial.println("** ERROR ** Failed to connect with new config / possibly hit config portal timeout; Resetting in 3sec...");
           delay(3000);
           //reset and try again, or maybe put it to deep sleep
           ESP.reset();
           delay(5000);
         }
-
-    
   } else {
     // Autoconnect if we can
     
-    //fetches ssid and pass and tries to connect
-    //if it does not connect it starts an access point with the specified name
-    //here  "AutoConnectAP"
-    //and goes into a blocking loop awaiting configuration
+    // Fetches ssid and pass and tries to connect; if it does not connect it starts an access point with the specified name
+    // and goes into a blocking loop awaiting configuration
     if (!wifiManager.autoConnect(AP_Name)) {
-      Serial.println("failed to connect and hit timeout");
+      Serial.println("** ERROR ** Failed to connect with new config / possibly hit timeout; Resetting in 3sec...");
       delay(3000);
       //reset and try again, or maybe put it to deep sleep
       ESP.reset();
@@ -170,36 +172,39 @@ void setup()
     }
   }
 
-
   // --- If you get here you have connected to the WiFi ---
-  Serial.println("connected...yeey :)");
+  Serial.println("Connected to wifi");
 
   // Read updated parameters
   strcpy(alexa_name1, custom_alexa_name1.getValue());
   strcpy(alexa_name2, custom_alexa_name2.getValue());
   strcpy(alexa_name3, custom_alexa_name3.getValue());
   strcpy(alexa_name4, custom_alexa_name4.getValue());
-
-  //save the custom parameters to FS
+  Serial.println("Read configured Alexa relay name #1: " + String(alexa_name1));
+  Serial.println("Read configured Alexa relay name #2: " + String(alexa_name2));
+  Serial.println("Read configured Alexa relay name #3: " + String(alexa_name3));
+  Serial.println("Read configured Alexa relay name #4: " + String(alexa_name4));
+          
+  // Save the custom parameters to the ESP8266 filesystem if changed
   if (shouldSaveConfig) {
-    Serial.println("saving config");
+    Serial.println("Saving config to ESP8266 filesystem");
     DynamicJsonBuffer jsonBuffer;
     JsonObject& json = jsonBuffer.createObject();
     json["alexa_name1"] = alexa_name1;
     json["alexa_name2"] = alexa_name2;
     json["alexa_name3"] = alexa_name3;
     json["alexa_name4"] = alexa_name4;
-
+    Serial.println("Attempting to open config JSON file for writing");
     File configFile = SPIFFS.open("/config.json", "w");
     if (!configFile) {
-      Serial.println("failed to open config file for writing");
+      Serial.println("** ERROR ** Failed to open JSON config file for writing");
+    } else {
+      json.printTo(Serial);
+      Serial.println();
+      json.printTo(configFile);
+      configFile.close();
+      Serial.println("File write complete");
     }
-
-    json.printTo(Serial);
-    Serial.println();
-    json.printTo(configFile);
-    configFile.close();
-    //end save
   }
 
   Serial.print("SSID: " );
@@ -207,7 +212,7 @@ void setup()
   Serial.print("Local IP: ");
   Serial.println(WiFi.localIP());
 
-  // -- ALEXA handling --
+  // -- ALEXA setup/handling --
    
     upnpBroadcastResponder.beginUdpMulticast();
     
@@ -224,11 +229,11 @@ void setup()
     upnpBroadcastResponder.addDevice(*alexa_switch3);
     upnpBroadcastResponder.addDevice(*alexa_switch4);
 
-    //Set relay pins to outputs
-       pinMode(12,OUTPUT); 
-       pinMode(13,OUTPUT);
-       pinMode(14,OUTPUT);
-       pinMode(16,OUTPUT);
+    // Set relay pins to outputs
+     pinMode(12,OUTPUT); 
+     pinMode(13,OUTPUT);
+     pinMode(14,OUTPUT);
+     pinMode(16,OUTPUT);
        
 
 }
@@ -236,16 +241,24 @@ void setup()
 void loop()
 {
 	 if(WiFi.status() == WL_CONNECTED) {
-      Serial.print(':');
       upnpBroadcastResponder.serverLoop();
       alexa_switch1->serverLoop();
       alexa_switch2->serverLoop();
       alexa_switch3->serverLoop();
       alexa_switch4->serverLoop();
 	 } else {
-      Serial.println("Disconnected while in loop(); Attempting reconnect...");  
+      Serial.println("Disconnected while in loop(); Attempting reconnect...");
       WiFi.begin();
+      // Output reconnection status info every 0.5 sec over the next 10 sec
+      for( int i = 0; i < 20 ; i++ )  {
+        delay(500);
+        Serial.println("WiFi status = " + WiFi.status());
+        if( WiFi.status() == WL_CONNECTED ) {
+          break;
+        }
+      }
       if(WiFi.status() != WL_CONNECTED) {
+        Serial.println("Failure to establish connection after 10sec. Will reattempt connection in 2 sec");
         delay(2000);
       }
 	 }
