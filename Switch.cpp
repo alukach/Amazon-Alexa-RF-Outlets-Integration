@@ -115,16 +115,16 @@ void Switch::handleUpnpControl(){
   //}
 
   String request = server->arg(0);      
-  Serial.print("HTTP request:");
+  Serial.print("  HTTP request from Alexa: ");
   Serial.println(request);
 
   if(request.indexOf("<BinaryState>1</BinaryState>") > 0) {
-      Serial.println("Requested state change: TURN ON");
+      Serial.println("  Requested state change: TURN ON");
       onCallback();
   }
 
   if(request.indexOf("<BinaryState>0</BinaryState>") > 0) {
-      Serial.println("Requested state change: TURN OFF");
+      Serial.println("  Requested state change: TURN OFF");
       offCallback();
   }
   
@@ -170,7 +170,7 @@ void Switch::handleSetupXml(){
         
     server->send(200, "text/xml", setup_xml.c_str());
     
-    Serial.print("Sending XML: ");
+    Serial.print("  Sending XML: ");
     Serial.print(setup_xml);
 }
 
@@ -205,5 +205,5 @@ void Switch::respondToSearch(IPAddress& senderIP, unsigned int senderPort) {
   UDP.write(response.c_str());
   UDP.endPacket();                    
 
-  Serial.println("Discovery response sent");
+  Serial.println("  Discovery response sent");
 }
