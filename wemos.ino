@@ -242,36 +242,43 @@ void setup()
        
 
 }
- 
+
+/* If disconnected from Wifi, enter a blocking loop that periodically attempts reconnection */
+void reconnectIfNecessary() {
+  while(WiFi.status() != WL_CONNECTED) {
+    Serial.println("Disconnected; Attempting reconnect to " + String(saved_ssid) + "...");
+    WiFi.disconnect();
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.begin(saved_ssid, saved_psk);
+    // Output reconnection status info every second over the next 10 sec
+    for( int i = 0; i < 10 ; i++ )  {
+      delay(1000);
+      Serial.print("WiFi status = ");
+      if( WiFi.status() == WL_CONNECTED ) {
+        Serial.println("Connected");
+        break;
+      } else {
+        Serial.println("Disconnected");
+      }
+    }
+    if(WiFi.status() != WL_CONNECTED) {
+      Serial.println("Failure to establish connection after 10 sec. Will reattempt connection in 2 sec");
+      delay(2000);
+    }
+  }
+}
+
 void loop()
 {
-	 if(WiFi.status() == WL_CONNECTED) {
-      upnpBroadcastResponder.serverLoop();
-      alexa_switch1->serverLoop();
-      alexa_switch2->serverLoop();
-      alexa_switch3->serverLoop();
-      alexa_switch4->serverLoop();
-	 } else {
-      Serial.println("Disconnected while in loop(); Attempting reconnect to " + String(saved_ssid) + "...");
-      WiFi.disconnect();
-      WiFi.mode(WIFI_AP_STA);
-      WiFi.begin(saved_ssid, saved_psk);
-      // Output reconnection status info every 0.5 sec over the next 10 sec
-      for( int i = 0; i < 20 ; i++ )  {
-        delay(500);
-        Serial.print("WiFi status = ");
-        if( WiFi.status() == WL_CONNECTED ) {
-          Serial.println("Connected");
-          break;
-        } else {
-          Serial.println("Disconnected");
-        }
-      }
-      if(WiFi.status() != WL_CONNECTED) {
-        Serial.println("Failure to establish connection after 10sec. Will reattempt connection in 2 sec");
-        delay(2000);
-      }
-	 }
+  // Ensure wifi is connected (won't return until it has connected)
+  reconnectIfNecessary();
+  // Respond to any Alexa/discovery requests
+  upnpBroadcastResponder.serverLoop();
+  // Respond to any UPnP control requests
+  alexa_switch1->serverLoop();
+  alexa_switch2->serverLoop();
+  alexa_switch3->serverLoop();
+  alexa_switch4->serverLoop();
 }
 
 void alexa_switch1On() {
