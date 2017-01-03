@@ -39,6 +39,8 @@ char alexa_name3[100] = "";
 char alexa_name4[100] = "";
 
 const char* AP_Name = "EchoBase1";
+char saved_ssid[100] = "";
+char saved_psk[100] = "";
 
 // Flag for saving config data
 bool shouldSaveConfig = false;
@@ -174,6 +176,9 @@ void setup()
 
   // --- If you get here you have connected to the WiFi ---
   Serial.println("Connected to wifi");
+  // Save the connect info in case we need to reconnect
+  WiFi.SSID().toCharArray(saved_ssid, 100);
+  WiFi.psk().toCharArray(saved_psk, 100);
 
   // Read updated parameters
   strcpy(alexa_name1, custom_alexa_name1.getValue());
@@ -247,14 +252,19 @@ void loop()
       alexa_switch3->serverLoop();
       alexa_switch4->serverLoop();
 	 } else {
-      Serial.println("Disconnected while in loop(); Attempting reconnect...");
-      WiFi.begin();
+      Serial.println("Disconnected while in loop(); Attempting reconnect to " + String(saved_ssid) + "...");
+      WiFi.disconnect();
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.begin(saved_ssid, saved_psk);
       // Output reconnection status info every 0.5 sec over the next 10 sec
       for( int i = 0; i < 20 ; i++ )  {
         delay(500);
-        Serial.println("WiFi status = " + WiFi.status());
+        Serial.print("WiFi status = ");
         if( WiFi.status() == WL_CONNECTED ) {
+          Serial.println("Connected");
           break;
+        } else {
+          Serial.println("Disconnected");
         }
       }
       if(WiFi.status() != WL_CONNECTED) {
