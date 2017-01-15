@@ -55,18 +55,18 @@ WiFiManager wifiManager;
 
 // RF Tooling - https://codebender.cc/sketch:80290#RCSwitch%20-%20Transmit%20(Etekcity%20Power%20Outlets).ino
 RCSwitch RFSwitch = RCSwitch();
-int RF_PULSE_LENGTH = 190; // Pulse length to use for RF transmitter
-int RF_TX_PIN = 10; // Digital pin connected to RF transmitter
+int RF_PULSE_LENGTH = 179; // Pulse length to use for RF transmitter
+int RF_TX_PIN = 0; // Digital pin connected to RF transmitter
 int RF_BIT_LENGTH = 24;
 
 // RF Signals (varies per remote controlled plugin set)
 unsigned long rc_codes[5][2] = {
-  // ON     //OFF 
-  {4461875, 4461884}, /* Outlet 1 */
-  {4462019, 4462028}, /* Outlet 2 */
-  {4462339, 4462348}, /* Outlet 3 */
-  {4463875, 4463884}, /* Outlet 4 */
-  {4470019, 4470028}, /* Outlet 5 */
+  // ON    //OFF 
+  {333107, 333116}, /* Outlet 1 */
+  {333251, 333260}, /* Outlet 2 */
+  {333571, 333580}, /* Outlet 3 */
+  {335107, 335116}, /* Outlet 4 */
+  {341251, 341260}, /* Outlet 5 */
 };
 // Callback notifying us of the need to save config
 void saveConfigCallback () {
